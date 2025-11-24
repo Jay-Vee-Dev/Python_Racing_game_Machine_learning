@@ -4,17 +4,20 @@ import random
 
 class Car:
     PREDEFINED_COLORS = [
-        (0, 255, 255),    # neon blue
-        (255, 0, 0),      # red
-        (0, 255, 0),      # green
-        (255, 255, 0),    # yellow
-        (255, 0, 255),    # magenta
-        (0, 128, 255),    # bright sky blue
-        (255, 128, 0),    # orange
-        (128, 0, 255),    # purple
-        (0, 255, 128),    # mint green
-        (255, 192, 203),  # pink
+        (0, 255, 255),
+        (255, 0, 0),
+        (0, 255, 0),
+        (255, 255, 0),
+        (255, 0, 255),
+        (0, 128, 255),
+        (255, 128, 0),
+        (128, 0, 255),
+        (0, 255, 128),
+        (255, 192, 203),
     ]
+
+    SENSOR_ANGLES = [-60, -30, 0, 30, 60]
+    SENSOR_MAX_DIST = 140
 
     def __init__(self, x=None, y=None, angle=None, color=None, track=None, color_idx=None):
         if track and track.centerline:
@@ -41,10 +44,10 @@ class Car:
 
     def sensors(self, track_mask):
         readings = []
-        for deg in (-45, 0, 45):
+        for deg in self.SENSOR_ANGLES:
             angle = math.radians(self.angle + deg)
             dist = 0
-            for d in range(1, 120, 3):
+            for d in range(1, self.SENSOR_MAX_DIST, 3):
                 sx = int(self.x + math.cos(angle) * d)
                 sy = int(self.y - math.sin(angle) * d)
                 if sx < 0 or sy < 0 or sx >= track_mask.get_width() or sy >= track_mask.get_height():
@@ -53,14 +56,14 @@ class Car:
                 if track_mask.get_at((sx, sy)).a == 0:
                     dist = d
                     break
-            readings.append(dist / 120.0)
+            readings.append(dist / self.SENSOR_MAX_DIST)
         return readings
 
     def step(self, steer, throttle, track_mask, finish_line=None):
         if not self.alive or self.finished:
-            return  # Crash or finished
+            return
 
-        # Finish line check
+        # Finish line
         if finish_line:
             x1, y1 = finish_line[0]
             x2, y2 = finish_line[1]
@@ -77,11 +80,10 @@ class Car:
                     self.speed = 0
                     return
 
-        # Movement
         max_turn = 2.0
         steer = max(-1.0, min(1.0, steer))
         self.angle += steer * max_turn
-        self.angle *= 0.98  # damping to reduce spinning
+        self.angle *= 0.98
 
         self.speed += throttle * 0.3
         self.speed = max(0.0, min(6.0, self.speed))
